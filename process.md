@@ -22,6 +22,8 @@ ADD R3, R1, R2;
 let's say we have the following assembly instructions in the ram:
 first the CPU fetches the first instruction "MOV R1, 5" from the ram and puts it inside the instruction register. the control unit decodes the instruction and tells the ALU to move the value 5 into register R1. then the CPU fetches the second instruction "MOV R2, 3" and puts it inside the instruction register. the control unit decodes the instruction and tells the ALU to move the value 3 into register R2. finally, the CPU fetches the third instruction "ADD R3, R1, R2" and puts it inside the instruction register. the control unit decodes the instruction and tells the ALU to add the values in registers R1 and R2 and store the result in register R3.
 
+inside a CPU, there are a a place called mode bit, if this bit is set to 0 the cpu is in user mode, and if it is set to 1 the cpu is in kernel mode. and if the CPU is in kernel mode then the cpu can execute special instructions (hardware related instructions) that are not available in user mode.
+
 ### RAM
 In your explanation, you mentioned that instructions move from Disk → RAM → CPU. That is correct, but a process needs RAM for more than just holding the code.
 in the ram we store:Code, data.
@@ -31,6 +33,8 @@ inside the ram, a process is divided into several segments:
 3. bss segment: this segment contains global and static variables that are uninitialized by the programmer.
 4. heap segment: this segment is used for dynamic memory allocation during the execution of the program.
 5. stack segment: this segment is used for function calls and local variables.
+
+when the computer boots up, the ram in split into two parts: kernel space and user space. the kernel space is reserved for the operating system and its components, while the user space is where user processes run.
 
 ### kernel vs user mode
 * in a CPU there are two modes of operation: kernel mode and user mode. if the cpu is running in kernel mode it has full access to all the resources of the computer including hardware and memory. (the process get extra access to special cpu instructions that are not available in user mode).
@@ -64,3 +68,24 @@ kernel summary:
 * handles system calls from user processes.
 * handles faults (like segmentation fault) from user processes.
 * handles interrupts from hardware devices.
+
+### the kernel code and system calls
+
+the kernel code is written in c programming language. and compiled into machine code that can be executed by the cpu using a compiler like gcc.
+
+but wait if the kernel code in written in c language and compiled into machine code using normal compiler like gcc, how does the kernel code get that extra instructions that are not available in user mode? 
+
+what i mean that i can write a c program and compile it using gcc, but this program will not have access to special cpu instructions that are only available in kernel mode. so how does the kernel code get these instructions?
+
+what is really happening is that in the kernel code there are some parts that are written in assembly language (not c language) and these parts contain the special cpu instructions that are only available in kernel mode. and these assembly parts are linked together with the c code to create the final kernel binary.
+i can make a program that contains both c code and assembly code(the special cpu instructions) and compile it using gcc but still this program will not have access to kernel mode because the cpu mode bit is set to user mode (0) when this program is executed. so the cpu will not allow this program to executed. but the kernel code is executed the cpu mode bit is set to kernel mode (1) so the cpu will allow the kernel code to execute and access all the resources of the computer.
+
+but what if my program needs to access hardware or memory that is not allowed in user mode what if my code want to access a hardware device?
+the answer is system calls.
+what is really happening is that when my program want to access a hardware device it makes a system call to the kernel. this system call is like a request to the kernel to do something on behalf of my program.
+when my program makes a system call (system call is a fuction), this function is containing special assembly instructions that will switch the cpu mode bit from user mode (0) to kernel mode (1) and then jump to a specific location in the kernel code that handles this system call.
+
+so the system call function implementation will not contain a lot of code, it will just contain the assembly instructions to switch the cpu mode and jump to the kernel code.
+in the kernel code there is a special table called system call table. this table contains the addresses of all the system call handlers in the kernel code.
+when the cpu switches to kernel mode and jumps to the kernel code, the kernel code will look at the system call number that was passed by my program and use this number to index into the system call table to find the address of the system call handler.
+then the kernel code will jump to this address and execute the system call handler to do the requested operation on behalf of my program, which will contain alot of code and instructions that will run in the kernel mode to get to the requested hardware or memory that the program needs to access and gives it the result.
