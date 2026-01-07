@@ -80,3 +80,24 @@ _start:
 but when the CPU tries to execute these instructions in user mode it will throw a general protection fault because these instructions are kernel mode instructions and cannot be executed in user mode.
 
 we have talked about how can my user program (the c code file) execute kernel mode instructions (the cli, hlt, sti instructions), the answer is through system calls, the user program cannot execute kernel mode instructions directly, but it can request the operating system to execute these instructions on its behalf through system calls.
+
+### compiler
+know after we now know that the compiler converts the source code to assembly code, a new question arises, how does the compiler know which assembly instructions to generate?
+because different CPU architectures have different assembly instructions(the 86x_64 architecture has different instructions than the ARM architecture) 
+```assembly
+; x86_64 architecture
+mov rax, 5      ; load 5 into register rax  
+; ARM architecture
+MOV R0, #5      ; load 5 into register R0
+```
+```
+they are both have different syntax and different register names. how could the compiler know which assembly instructions to generate? the answer is through the target architecture.
+when you compile a source code file using a compiler, you are using a compiler that is designed to generate assembly instructions for a specific target architecture.
+
+when you have installed this compiler on your machine, you have installed the version of the compiler that is designed to generate assembly instructions for your machine's architecture.
+
+but there are a compilers version that can generate an assembly code for any architecture but you have to tell the compiler which architecture you are using (86x_64, ARM, etc.) so the compiler can generate the correct assembly instructions for that architecture.
+these compilers have a flag that you can use to specify the target architecture, for example in gcc compiler you can use the -march flag to specify the target architecture.
+also this compiler has a default target architecture that it uses when you don't specify the -march flag, this default target architecture is usually the architecture of the machine that the compiler is running on.
+but how does the compiler know the architecture of the machine that it is running on? using the uname -e command.
+
