@@ -112,4 +112,45 @@ when we installed the stdlib for c language we have installed the version of the
 what about the OS does it effect the assembly instructions that the compiler generates?
 the OS does not effect the assembly instructions that the compiler generates because the assembly instructions are specific to
 the CPU architecture and not the OS. that's rwong because different OS's have different system calls and different ways of handling system calls.
-in the past we have said that when a user program makes a system call, the CPU switches from user mode to kernel mode, executes the requested service in kernel mode, and then switches back to user mode.
+
+i new that doesn't make sense because the complier has to generate assembly instructions that are compatible with CPU architecture and this has nothing to do with the OS but there are two things where that compiler have to take the OS into considration system calls and calling conventions. 
+
+### system calls
+
+when we have talked about system calls we have said that different OS's have different system calls and different ways of handling system calls so the compiler has to generate assembly instructions that are compatible with the OS's system calls even if the architecture is the same.
+for example the Linux OS and FreeBSD both can run in x86_64 but for a system call to read a file in Linux the compiler has to generate the following assembly instructions:
+```assembly
+mov eax, 0      ; syscall number for sys_read
+mov ebx, fd     ; file descriptor
+mov ecx, buf    ; buffer to store the read data
+mov edx, count  ; number of bytes to read
+int 0x80        ; call kernel
+```
+but for FreeBSD the compiler has to generate the following assembly instructions:
+```assembly
+mov eax, 3      ; syscall number for sys_read
+mov ebx, fd     ; file descriptor
+mov ecx, buf    ; buffer to store the read data
+mov edx, count  ; number of bytes to read
+int 0x80        ; call kernel
+```
+as you can see the syscall number for sys_read is different in Linux and FreeBSD so the compiler has to generate different assembly instructions for the same system call in different OS's even if the architecture is the same.
+
+### calling conventions
+On the same CPU, different OSes use different calling conventions: calling conventions define how functions receive parameters from the caller and how they return a value. they also define how the stack is managed during function calls.
+for example in x86_64 architecture, Linux uses the System V AMD64 ABI calling convention, while Windows on x86_64 uses the Microsoft x64 calling convention.
+so the compiler has to generate different assembly instructions for function calls depending on the OS even if the architecture is the same.
+for example for a function call in Linux the compiler has to generate the following assembly instructions:
+```assembly
+mov rdi, arg1   ; first argument
+mov rsi, arg2   ; second argument
+call function   ; call the function
+```
+but for Windows the compiler has to generate the following assembly instructions:
+```assembly
+mov rcx, arg1   ; first argument
+mov rdx, arg2   ; second argument
+call function   ; call the function
+```
+as you can see the way the arguments are passed to the function is different in Linux and Windows so the compiler has to generate different assembly instructions for function calls in different OS's even if the architecture is the same.
+but here comes the question, if the both generated assembly instructions are for the same architecture (x86_64) that's means that both assembly instructions can be executed by the same CPU, so why do we need different calling conventions for different OS's and what does hppens if we the compiler generated the wrong calling convention(widows calling convention on linux)? nothing. the CPU will execute the instructions without any problem because both assembly instructions are for the same architecture, 
