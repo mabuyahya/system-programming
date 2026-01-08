@@ -153,4 +153,108 @@ mov rdx, arg2   ; second argument
 call function   ; call the function
 ```
 as you can see the way the arguments are passed to the function is different in Linux and Windows so the compiler has to generate different assembly instructions for function calls in different OS's even if the architecture is the same.
-but here comes the question, if the both generated assembly instructions are for the same architecture (x86_64) that's means that both assembly instructions can be executed by the same CPU, so why do we need different calling conventions for different OS's and what does hppens if we the compiler generated the wrong calling convention(widows calling convention on linux)? nothing. the CPU will execute the instructions without any problem because both assembly instructions are for the same architecture, 
+but here comes the question, if the both generated assembly instructions are for the same architecture (x86_64) that's means that both assembly instructions can be executed by the same CPU, so why do we need different calling conventions for different OS's and what does hppens if we the compiler generated the wrong calling convention(widows calling convention on linux)? nothing. the CPU will execute the instructions without any problem because both assembly instructions are for the same architecture 
+The Real Problem: Calling External Libraries
+The real issue is when you call functions you didn't compile yourself.
+The Key Insight: It Only Works If EVERYONE Uses The Same Convention
+but What Happens If You Mix Conventions?
+
+Scenario: Your Code Uses Windows Convention on Linux
+```c
+// Your main.c (compiled with Windows convention on Linux)
+int add(int a, int b);  // You will implement this
+
+int main() {
+    int result = add(5, 10);
+    printf("Result: %d\n", result);  // ← Calling printf from Linux libc
+    return 0;
+}
+
+int add(int a, int b) {
+    return a + b;
+}
+```
+
+```assembly
+main:
+    ; Call add() using Windows convention
+    mov ecx, 5          ; a = 5 (Windows: first arg in ecx)
+    mov edx, 10         ; b = 10 (Windows: second arg in edx)
+    call add
+    
+    ; Call printf() - but printf is from Linux libc!
+    mov ecx, format     ; ← Windows convention:  first arg in ecx
+    mov edx, eax        ; ← Windows convention: second arg in edx
+    call printf         ; ← This is Linux's printf!
+    
+    ret
+
+add:
+    ; Expects Windows convention
+    mov eax, ecx        ; a is in ecx
+    add eax, edx        ; b is in edx
+    ret
+```
+
+but here comes the problem, the printf function is from the Linux libc and it expects the arguments to be passed using the Linux calling convention (first argument in rdi, second argument in rsi) but we are passing the arguments using the Windows calling convention (first argument in rcx, second argument in rdx) so when the printf function tries to access the first argument it will get a garbage value because the first argument is not in rdi but in rcx so the program will produce unexpected results or even crash.
+
+```assembly
+; Linux's printf expects Linux convention! 
+printf:
+    ; Expects format string in rdi (NOT ecx!)
+    mov rax, rdi        ; ← Reads rdi for format string
+    ; Expects second arg in rsi (NOT edx!)
+    mov rbx, rsi        ; ← Reads rsi for the number
+    ; ...  printf implementation ...
+    ret
+```
+
+another example thats more clear:
+```c
+// test. c
+#include <stdio.h>
+
+// This function expects Linux convention (rdi, rsi)
+int linux_add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    int result;
+    
+    // Call using CORRECT Linux convention
+    asm volatile(
+        "mov $5, %%edi\n"      // a = 5 in edi (Linux convention)
+        "mov $10, %%esi\n"     // b = 10 in esi (Linux convention)
+        "call linux_add\n"
+        "mov %%eax, %0\n"
+        : "=r" (result)
+        :
+        : "edi", "esi", "eax"
+    );
+    printf("Correct call:  %d\n", result);  // Should print 15
+    
+    // Call using WRONG Windows convention
+    asm volatile(
+        "mov $5, %%ecx\n"      // a = 5 in ecx (Windows convention)
+        "mov $10, %%edx\n"     // b = 10 in edx (Windows convention)
+        "call linux_add\n"
+        "mov %%eax, %0\n"
+        : "=r" (result)
+        :
+        : "ecx", "edx", "eax"
+    );
+    printf("Wrong call: %d\n", result);    // Will print GARBAGE! 
+    
+    return 0;
+}
+```
+the CPU can execute any register usage.
+But NO, you cannot use a different convention than the OS's standard, because:
+🔴 You cannot call system libraries
+🔴 You cannot call the kernel
+🔴 You cannot use any pre-compiled code
+🔴 You are essentially isolated from the entire system
+The calling convention is a SOCIAL contract, not a CPU limitation.
+Everyone on the same OS must follow the same convention, or they cannot communicate with each other! 🎯
+
