@@ -101,3 +101,15 @@ these compilers have a flag that you can use to specify the target architecture,
 also this compiler has a default target architecture that it uses when you don't specify the -march flag, this default target architecture is usually the architecture of the machine that the compiler is running on.
 but how does the compiler know the architecture of the machine that it is running on? using the uname -e command.
 
+
+now what about the functions that i use in my c code file like printf, scanf.
+these functions are alrady compiled to assembly instructions (machine code) and stored in a library file (a file that contains pre-compiled functions that can be used by other programs).
+when the compiler sees these functions in my c code file, it knows that these functions are already compiled to assembly instructions and stored in a library file, so it does not need to generate assembly instructions for these functions and get link them during the linking phase, but these functions instructions have to be for the same target architecture as the one that the compiler is generating assembly instructions for.
+so they are the same and the compiler when you installed a code that already compiled to instructions these instructions have to be for the same target architecture.
+when we installed the stdlib for c language we have installed the version of the library that is designed for our machine architecture so when the compiler links these functions during the linking phase it links the correct version of these functions that are designed for our machine architecture.
+
+
+what about the OS does it effect the assembly instructions that the compiler generates?
+the OS does not effect the assembly instructions that the compiler generates because the assembly instructions are specific to
+the CPU architecture and not the OS. that's rwong because different OS's have different system calls and different ways of handling system calls.
+in the past we have said that when a user program makes a system call, the CPU switches from user mode to kernel mode, executes the requested service in kernel mode, and then switches back to user mode.
