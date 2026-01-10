@@ -258,3 +258,98 @@ But NO, you cannot use a different convention than the OS's standard, because:
 The calling convention is a SOCIAL contract, not a CPU limitation.
 Everyone on the same OS must follow the same convention, or they cannot communicate with each other! 🎯
 
+### libraries
+as we have said before the compiler and the libraries that we have installed is designed for a specific architecture and OS.
+so when we install the libraries for c language we have to install the version that is designed for our machine architecture and OS so when the compiler links these functions during the linking phase it links the correct version of these functions that are designed for our machine architecture and OS.
+but the one who write these functions in the library he had to write each function in different versions so here came the phrase(one source, multiple binaries).
+
+### one source, multiple binaries
+the phrase (one source, multiple binaries) means that the source code of a library is written in a way that it can be compiled to different binaries for different architectures and OS's.
+```c
+// malloc.c - ONE source file
+void* malloc(size_t size) {
+    // Common validation (no macros needed)
+    if (size == 0) return NULL;
+    if (size > MAX_SIZE) return NULL;
+    
+    // Platform-specific allocation
+    #if defined(__linux__)
+        return __malloc_linux(size);
+    #elif defined(_WIN32)
+        return __malloc_windows(size);
+    #elif defined(__APPLE__)
+        return __malloc_darwin(size);
+    #endif
+}
+
+// Platform-specific implementations
+#if defined(__linux__)
+void* __malloc_linux(size_t size) {
+    // Architecture-specific optimizations
+    #if defined(__x86_64__)
+        // x86_64 optimized code
+    #elif defined(__aarch64__)
+        // ARM64 optimized code
+    #endif
+    
+    // Call appropriate syscall
+    return mmap(NULL, size, ... );
+}
+#endif
+
+#if defined(_WIN32)
+void* __malloc_windows(size_t size) {
+    return HeapAlloc(GetProcessHeap(), 0, size);
+}
+#endif
+```
+here is the same source code of the malloc function that can be compiled to different binaries for different architectures and OS's (one source, multiple binaries), this after compiling this source code on a linux machine with x86_64 architecture it will produce a binary that is designed for linux OS and x86_64 architecture and if we compile it on a windows machine with ARM architecture it will produce a binary that is designed for windows OS and ARM architecture.
+so that's how the libraries that we install are designed for different architectures and OS's.
+the stdlib for c language is written in this way (one source, multiple binaries) so any function in the stdlib we can use it on any architecture and OS as long as we have the correct binary version of the stdlib for our architecture and OS. but what about ather libraries that are not written in this way (one source, multiple binaries) ?
+the answer is that we cannot use these libraries on different architectures and OS's because these libraries are only written for a specific architecture and OS and will only work on that architecture and OS.
+also the stdlib contains TWO things:
+✅ C Standard Library functions (printf, malloc, fopen, etc.)
+✅ POSIX functions (fork, pthread_create, socket, etc.) this part is OS specific (unix-like OS's) so if we are using a non-unix-like OS (like windows) we cannot use these functions because they are not implemented in the stdlib for windows.
+but why they didn't implement these functions in a protable way ? because these functions are not standardized by the C standard and each OS has its own way of implementing these functions so they cannot be implemented in a portable way. for example the fork function is not implemented in windows because windows does not have the concept of forking processes like unix-like OS's. they have their own way of creating new processes (CreateProcess function which create a new process from and it has nothing to do with the parent process nulike the fork which forks that parent).
+
+can they make it portable ? technecally yes but it will be very difficult and slow because they have to emulate the behavior of these functions on non-unix-like OS's.
+```c
+#if defined(__linux__) || defined(__APPLE__)
+    // Use real fork on POSIX systems
+    pid_t fork() {
+        // Call kernel fork syscall
+        return syscall(SYS_fork);
+    }
+    
+#elif defined(_WIN32)
+    // Emulate fork on Windows (very difficult!)
+    pid_t fork() {
+        // Windows doesn't have real fork
+        // Would need to: 
+        // 1. Create new process
+        // 2. Copy all memory
+        // 3. Copy all handles
+        // 4. Copy all thread-local storage
+        // This is VERY complex and slow!
+        
+        // Cygwin and WSL do this, but it's hacky
+        return windows_fork_emulation();
+    }
+#endif
+```
+
+But they DON'T do this because:
+Different design philosophies:
+
+Unix: "fork is fundamental"
+Windows: "CreateProcess is better"
+Performance:
+
+Real fork() on Linux is fast (copy-on-write)
+Emulated fork() on Windows would be slow
+Not standardized:
+
+No requirement to make them compatible
+Each OS can do its own thing
+
+and windows sees that creating new processes using CreateProcess is better than forking processes using fork so they didn't implement the fork function in the stdlib for windows.
